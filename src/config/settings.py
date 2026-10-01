@@ -1,6 +1,8 @@
-import os
+﻿import os
 from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 def find_movies_csv() -> str:
     root = Path(__file__).resolve().parent.parent
@@ -11,6 +13,7 @@ def find_movies_csv() -> str:
         if file_path.is_file():
             return str(file_path.resolve())
     return str(seed_path.resolve())
+
 
 class BaseAppSettings(BaseSettings):
     PATH_TO_DB: str = "test.db"
@@ -50,11 +53,14 @@ class BaseAppSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+
 class Settings(BaseAppSettings):
     pass
 
+
 class TestingSettings(BaseAppSettings):
     pass
+
 
 settings = Settings()
 
@@ -89,6 +95,7 @@ SMTP_PASSWORD = settings.SMTP_PASSWORD
 
 MAILHOG_HOST = settings.MAILHOG_HOST
 MAILHOG_API_PORT = settings.MAILHOG_API_PORT
+
 
 def get_settings():
     return settings
