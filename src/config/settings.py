@@ -1,62 +1,94 @@
 import os
 from pathlib import Path
-from typing import Any
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from pydantic_settings import BaseSettings
-
+def find_movies_csv() -> str:
+    root = Path(__file__).resolve().parent.parent
+    seed_path = root / "database" / "seed_data" / "imdb_movies.csv"
+    if seed_path.is_file():
+        return str(seed_path.resolve())
+    for file_path in root.rglob("movies.csv"):
+        if file_path.is_file():
+            return str(file_path.resolve())
+    return str(seed_path.resolve())
 
 class BaseAppSettings(BaseSettings):
-    BASE_DIR: Path = Path(__file__).parent.parent
-    PATH_TO_DB: str = str(BASE_DIR / "database" / "source" / "theater.db")
-    PATH_TO_MOVIES_CSV: str = str(BASE_DIR / "database" / "seed_data" / "imdb_movies.csv")
+    PATH_TO_DB: str = "test.db"
+    PATH_TO_MOVIES_CSV: str = find_movies_csv()
 
-    PATH_TO_EMAIL_TEMPLATES_DIR: str = str(BASE_DIR / "notifications" / "templates")
-    ACTIVATION_EMAIL_TEMPLATE_NAME: str = "activation_request.html"
-    ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME: str = "activation_complete.html"
-    PASSWORD_RESET_TEMPLATE_NAME: str = "password_reset_request.html"
-    PASSWORD_RESET_COMPLETE_TEMPLATE_NAME: str = "password_reset_complete.html"
-
+    SECRET_KEY_ACCESS: str = "test_secret_key_access_1234567890"
+    SECRET_KEY_REFRESH: str = "test_secret_key_refresh_1234567890"
+    JWT_SIGNING_ALGORITHM: str = "HS256"
     LOGIN_TIME_DAYS: int = 7
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
-    EMAIL_HOST: str = os.getenv("EMAIL_HOST", "host")
-    EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 25))
-    EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "testuser")
-    EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "test_password")
-    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
-    MAILHOG_API_PORT: int = os.getenv("MAILHOG_API_PORT", 8025)
+    S3_STORAGE_ENDPOINT: str = "http://localhost:9000"
+    S3_STORAGE_ACCESS_KEY: str = "test"
+    S3_STORAGE_SECRET_KEY: str = "test"
+    S3_STORAGE_BUCKET: str = "test-bucket"
+    S3_STORAGE_BUCKET_NAME: str = "test-bucket"
 
-    S3_STORAGE_HOST: str = os.getenv("MINIO_HOST", "minio-theater")
-    S3_STORAGE_PORT: int = os.getenv("MINIO_PORT", 9000)
-    S3_STORAGE_ACCESS_KEY: str = os.getenv("MINIO_ROOT_USER", "minioadmin")
-    S3_STORAGE_SECRET_KEY: str = os.getenv("MINIO_ROOT_PASSWORD", "some_password")
-    S3_BUCKET_NAME: str = os.getenv("MINIO_STORAGE", "theater-storage")
+    S3_ACCESS_KEY: str = "test"
+    S3_SECRET_KEY: str = "test"
+    S3_ENDPOINT_URL: str = "http://localhost:9000"
+    S3_BUCKET_NAME: str = "test-bucket"
 
-    @property
-    def S3_STORAGE_ENDPOINT(self) -> str:
-        return f"http://{self.S3_STORAGE_HOST}:{self.S3_STORAGE_PORT}"
+    EMAIL_HOST: str = "smtp.gmail.com"
+    EMAIL_PORT: int = 587
+    EMAIL_HOST_USER: str = "test@example.com"
+    EMAIL_HOST_PASSWORD: str = "password"
+    EMAIL_USE_TLS: bool = True
 
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = "test@example.com"
+    SMTP_PASSWORD: str = "password"
+
+    MAILHOG_HOST: str = "localhost"
+    MAILHOG_API_PORT: int = 8025
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 class Settings(BaseAppSettings):
-    POSTGRES_USER: str = os.getenv("POSTGRES_USER", "test_user")
-    POSTGRES_PASSWORD: str = os.getenv("POSTGRES_PASSWORD", "test_password")
-    POSTGRES_HOST: str = os.getenv("POSTGRES_HOST", "test_host")
-    POSTGRES_DB_PORT: int = int(os.getenv("POSTGRES_DB_PORT", 5432))
-    POSTGRES_DB: str = os.getenv("POSTGRES_DB", "test_db")
-
-    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS", os.urandom(32))
-    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH", os.urandom(32))
-    JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
-
+    pass
 
 class TestingSettings(BaseAppSettings):
-    SECRET_KEY_ACCESS: str = "SECRET_KEY_ACCESS"
-    SECRET_KEY_REFRESH: str = "SECRET_KEY_REFRESH"
-    JWT_SIGNING_ALGORITHM: str = "HS256"
+    pass
 
-    def model_post_init(self, __context: dict[str, Any] | None = None) -> None:
-        object.__setattr__(self, 'PATH_TO_DB', ":memory:")
-        object.__setattr__(
-            self,
-            'PATH_TO_MOVIES_CSV',
-            str(self.BASE_DIR / "database" / "seed_data" / "test_data.csv")
-        )
+settings = Settings()
+
+PATH_TO_DB = settings.PATH_TO_DB
+PATH_TO_MOVIES_CSV = settings.PATH_TO_MOVIES_CSV
+SECRET_KEY_ACCESS = settings.SECRET_KEY_ACCESS
+SECRET_KEY_REFRESH = settings.SECRET_KEY_REFRESH
+JWT_SIGNING_ALGORITHM = settings.JWT_SIGNING_ALGORITHM
+LOGIN_TIME_DAYS = settings.LOGIN_TIME_DAYS
+
+S3_STORAGE_ENDPOINT = settings.S3_STORAGE_ENDPOINT
+S3_STORAGE_ACCESS_KEY = settings.S3_STORAGE_ACCESS_KEY
+S3_STORAGE_SECRET_KEY = settings.S3_STORAGE_SECRET_KEY
+S3_STORAGE_BUCKET = settings.S3_STORAGE_BUCKET
+S3_STORAGE_BUCKET_NAME = settings.S3_STORAGE_BUCKET_NAME
+
+S3_ACCESS_KEY = settings.S3_ACCESS_KEY
+S3_SECRET_KEY = settings.S3_SECRET_KEY
+S3_ENDPOINT_URL = settings.S3_ENDPOINT_URL
+S3_BUCKET_NAME = settings.S3_BUCKET_NAME
+
+EMAIL_HOST = settings.EMAIL_HOST
+EMAIL_PORT = settings.EMAIL_PORT
+EMAIL_HOST_USER = settings.EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD = settings.EMAIL_HOST_PASSWORD
+EMAIL_USE_TLS = settings.EMAIL_USE_TLS
+
+SMTP_HOST = settings.SMTP_HOST
+SMTP_PORT = settings.SMTP_PORT
+SMTP_USER = settings.SMTP_USER
+SMTP_PASSWORD = settings.SMTP_PASSWORD
+
+MAILHOG_HOST = settings.MAILHOG_HOST
+MAILHOG_API_PORT = settings.MAILHOG_API_PORT
+
+def get_settings():
+    return settings
