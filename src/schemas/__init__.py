@@ -1,4 +1,4 @@
-﻿from schemas.movies import (
+from schemas.movies import (
     MovieDetailSchema,
     MovieListResponseSchema,
     MovieListItemSchema,
@@ -11,7 +11,6 @@ from schemas.accounts import (
     UserRegistrationResponseSchema,
     UserActivationRequestSchema,
     MessageResponseSchema,
-    UserActivationRequestSchema,
     PasswordResetRequestSchema,
     PasswordResetCompleteRequestSchema,
     UserLoginResponseSchema,
