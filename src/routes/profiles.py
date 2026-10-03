@@ -29,8 +29,9 @@ from validation import (
 
 router = APIRouter()
 
+
 @router.post(
-    '/users/{user_id}/profile/',
+    "/users/{user_id}/profile/",
     response_model=UserProfileSchema,
     status_code=status.HTTP_201_CREATED,
 )
@@ -40,16 +41,47 @@ async def create_user_profile(
     last_name: str = Form(...),
     gender: str = Form(...),
     date_of_birth: date = Form(...),
-    info: str = Form(''),
+    info: str = Form(""),
     avatar: UploadFile | None = File(None),
     db: AsyncSession = Depends(get_db),
     token: str = Depends(get_token),
     jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
     storage: S3StorageInterface = Depends(get_s3_storage_client),
-):
+) -> UserProfileSchema:
+    """
+    Endpoint for creating a user profile.
+
+    Validates the authorization token, ensures the requester has permission to create
+    the profile, checks for an existing profile, validates all submitted fields, uploads
+    the avatar to S3 storage (if provided), and stores the profile in the database.
+
+    Args:
+        user_id (int): The ID of the user for whom the profile is being created.
+        first_name (str): The user's first name.
+        last_name (str): The user's last name.
+        gender (str): The user's gender.
+        date_of_birth (date): The user's date of birth.
+        info (str): Additional profile information.
+        avatar (UploadFile | None): The avatar image file.
+        db (AsyncSession): The asynchronous database session.
+        token (str): The extracted Bearer token.
+        jwt_manager (JWTAuthManagerInterface): The JWT authentication manager.
+        storage (S3StorageInterface): The S3-compatible storage client.
+
+    Returns:
+        UserProfileSchema: The newly created user profile.
+
+    Raises:
+        HTTPException:
+            - 401 Unauthorized if the token is missing, invalid, or expired, or the user is not found/active.
+            - 403 Forbidden if the requester does not have permission to create this profile.
+            - 400 Bad Request if the user already has a profile.
+            - 422 Unprocessable Entity if validation fails.
+            - 500 Internal Server Error if the avatar upload fails.
+    """
     try:
         decoded_token = jwt_manager.decode_access_token(token)
-        token_user_id = decoded_token.get('user_id')
+        token_user_id = decoded_token.get("user_id")
     except BaseSecurityError as error:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -59,7 +91,7 @@ async def create_user_profile(
     if not token_user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid token.',
+            detail="Invalid token.",
         )
 
     current_user_result = await db.execute(
@@ -70,7 +102,7 @@ async def create_user_profile(
     if not current_user or not current_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='User not found or not active.',
+            detail="User not found or not active.",
         )
 
     target_user_result = await db.execute(
@@ -81,7 +113,7 @@ async def create_user_profile(
     if not target_user or not target_user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='User not found or not active.',
+            detail="User not found or not active.",
         )
 
     is_admin = current_user.group_id == 3
@@ -95,7 +127,7 @@ async def create_user_profile(
     if info is not None and not info.strip():
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail='Info field cannot be empty or contain only spaces.',
+            detail="Info field cannot be empty or contain only spaces.",
         )
 
     existing_profile_result = await db.execute(
@@ -106,7 +138,7 @@ async def create_user_profile(
     if existing_profile:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail='User already has a profile.',
+            detail="User already has a profile.",
         )
 
     try:
@@ -121,7 +153,7 @@ async def create_user_profile(
         if avatar is not None:
             validate_image(avatar)
 
-            avatar_key = f'avatars/{user_id}_avatar.jpg'
+            avatar_key = f"avatars/{user_id}_avatar.jpg"
             avatar_data = await avatar.read()
 
             await storage.upload_file(
@@ -145,15 +177,15 @@ async def create_user_profile(
         await db.commit()
         await db.refresh(profile)
 
-        return {
-            'id': profile.id,
-            'first_name': profile.first_name,
-            'last_name': profile.last_name,
-            'gender': profile.gender,
-            'date_of_birth': profile.date_of_birth,
-            'info': profile.info,
-            'avatar': avatar_url,
-        }
+        return UserProfileSchema(
+            id=profile.id,
+            first_name=profile.first_name,
+            last_name=profile.last_name,
+            gender=profile.gender,
+            date_of_birth=profile.date_of_birth,
+            info=profile.info,
+            avatar=avatar_url,
+        )
 
     except ValueError as error:
         await db.rollback()
@@ -170,5 +202,5 @@ async def create_user_profile(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Failed to upload avatar. Please try again later.',
+            detail="Failed to upload avatar. Please try again later.",
         )
