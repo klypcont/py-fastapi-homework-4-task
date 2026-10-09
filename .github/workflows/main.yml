@@ -1,4 +1,4 @@
-﻿name: CI Pipeline
+name: CI Pipeline
 
 on:
   pull_request:
@@ -87,36 +87,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Pull required images with retry
-        run: |
-          for i in 1 2 3 4 5; do
-            echo "Attempt $i: pulling minio/minio and mailhog/mailhog..."
-            if docker pull minio/minio:latest && docker pull mailhog/mailhog; then
-              echo "Images pulled successfully."
-              break
-            fi
-            if [ "$i" -eq 5 ]; then
-              echo "Failed to pull images after 5 attempts."
-              exit 1
-            fi
-            echo "Pull failed, retrying in 30 seconds..."
-            sleep 30
-          done
-
       - name: Start Docker Compose and wait for completion
         run: |
-          for i in 1 2 3; do
-            echo "Attempt $i: starting docker compose..."
-            if docker compose -f docker-compose-tests.yml up --build --abort-on-container-exit --exit-code-from web; then
-              echo "Docker compose completed successfully."
-              exit 0
-            fi
-            echo "docker compose failed, cleaning up and retrying in 30 seconds..."
-            docker compose -f docker-compose-tests.yml down
-            sleep 30
-          done
-          echo "docker compose failed after 3 attempts."
-          exit 1
+          docker compose -f docker-compose-tests.yml up --build --abort-on-container-exit --exit-code-from web
 
       - name: Cleanup
         if: always()
